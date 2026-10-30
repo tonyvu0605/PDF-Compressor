@@ -15,6 +15,7 @@ from pdf_compressor.core.settings import (
     load_settings,
     new_log_path,
     save_settings,
+    writable_dir,
 )
 
 
@@ -108,6 +109,19 @@ def test_data_dir(tmp_path: Path) -> None:
 
     (app / "portable.txt").touch()
     assert data_dir(app, appdata) == app
+
+
+def test_writable_dir_skips_unusable_folders(tmp_path: Path) -> None:
+    # A file where the folder should be stands in for a folder Windows refuses.
+    refused = tmp_path / "Program Files" / "PDF Compressor"
+    refused.parent.mkdir()
+    refused.write_text("not a folder", encoding="utf-8")
+    fallback = tmp_path / "AppData" / "PDF Compressor"
+
+    chosen = writable_dir([refused, fallback])
+
+    assert chosen == fallback
+    assert (fallback / "logs").is_dir()
 
 
 def test_app_dir_frozen(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

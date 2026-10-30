@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 KEEP_LOGS = 20
 APP_NAME = "PDF Compressor"
 PORTABLE_MARKER = "portable.txt"
+WRITE_PROBE = ".write-test"
 OUTPUT_FOLDER_NAME = "Compressed PDFs"
 BACKUP_FOLDER_NAME = "PDF Backups"
 FOLDERID_DOCUMENTS = "{FDD39AD0-238F-46AF-ADB4-6C85480369C7}"
@@ -126,6 +127,21 @@ def documents_dir() -> Path:
     except OSError:
         logger.warning("Windows did not report a Documents folder", exc_info=True)
         return Path.home() / "Documents"
+
+
+def writable_dir(candidates: list[Path]) -> Path:
+    """Return the first folder where settings and logs can really be written."""
+    for folder in candidates:
+        try:
+            (folder / "logs").mkdir(parents=True, exist_ok=True)
+            probe = folder / WRITE_PROBE
+            probe.write_bytes(b"")
+            probe.unlink()
+        except OSError:
+            logger.warning("Can't write to %s; trying the next folder", folder)
+            continue
+        return folder
+    raise OSError("No folder could hold the settings and logs")
 
 
 def new_log_path(logs: Path, now: datetime) -> Path:

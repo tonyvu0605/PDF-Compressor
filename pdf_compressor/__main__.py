@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
@@ -13,11 +14,13 @@ from PySide6.QtWidgets import QApplication
 # Absolute imports: PyInstaller runs this file as a script, not as a package.
 from pdf_compressor.core.batch import remove_leftover_temps
 from pdf_compressor.core.settings import (
+    APP_NAME,
     app_dir,
     data_dir,
     documents_dir,
     load_settings,
     new_log_path,
+    writable_dir,
 )
 from pdf_compressor.gui.main_window import MainWindow
 
@@ -28,8 +31,12 @@ logger = logging.getLogger("pdf_compressor")
 
 def main(argv: list[str]) -> int:
     """Run the app and return its exit code."""
-    data = data_dir(app_dir(), Path(os.environ["APPDATA"]))
-    data.mkdir(parents=True, exist_ok=True)
+    appdata = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+    preferred = data_dir(app_dir(), appdata)
+    # A portable copy unzipped where the user can't write falls back to
+    # AppData, then the temp folder, instead of failing before any window.
+    fallbacks = [preferred, appdata / APP_NAME, Path(tempfile.gettempdir()) / APP_NAME]
+    data = writable_dir(list(dict.fromkeys(fallbacks)))
     # delay=True: a launch that logs nothing leaves no log file behind.
     handler = logging.FileHandler(
         new_log_path(data / "logs", datetime.now()), delay=True, encoding="utf-8"
@@ -41,6 +48,10 @@ def main(argv: list[str]) -> int:
     )
     pymupdf.set_messages(pylogging=True, pylogging_level=logging.WARNING)
     sys.excepthook = _log_uncaught
+    if data != preferred:
+        logger.warning(
+            "Can't write to %s, so settings and logs are in %s", preferred, data
+        )
 
     try:
         remove_leftover_temps(data)
