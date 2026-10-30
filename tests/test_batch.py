@@ -138,10 +138,67 @@ def test_backup_failure_keeps_original(
 def test_backup_run_dir_is_fresh(tmp_path: Path) -> None:
     backups = tmp_path / "Backups"
 
-    assert backup_run_dir(backups, NOW) == backups / "2026-10-29 1405"
+    # Each call claims its folder, so two runs in one minute never share one.
+    first = backup_run_dir(backups, NOW)
+    second = backup_run_dir(backups, NOW)
 
-    (backups / "2026-10-29 1405").mkdir(parents=True)
-    assert backup_run_dir(backups, NOW) == backups / "2026-10-29 1405 (2)"
+    assert first == backups / "2026-10-29 1405"
+    assert second == backups / "2026-10-29 1405 (2)"
+    assert first.is_dir()
+    assert second.is_dir()
+
+
+def test_existing_backup_is_never_overwritten(
+    case: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = (case / "a scan.pdf").read_bytes()
+    taken = tmp_path / "Backups" / "taken"
+    earlier = taken / "Smith Case" / "a scan.pdf"
+    earlier.parent.mkdir(parents=True)
+    earlier.write_bytes(b"an earlier run's backup")
+    monkeypatch.setattr(batch, "backup_run_dir", lambda folder, now: taken)
+
+    result = run(case, settings_for(tmp_path, SaveMode.BACKUP), tmp_path / "Data")
+
+    first = result.results[0]
+    assert first.status is Status.FAILED
+    assert first.message == "Not changed: the backup copy failed"
+    assert earlier.read_bytes() == b"an earlier run's backup"
+    assert (case / "a scan.pdf").read_bytes() == original
+
+
+def test_unused_backup_folder_is_removed(tmp_path: Path, text_pdf: Path) -> None:
+    folder = tmp_path / BASE / "Smith Case"
+    folder.mkdir(parents=True)
+    shutil.copyfile(text_pdf, folder / "b text.pdf")
+
+    run(folder, settings_for(tmp_path, SaveMode.BACKUP), tmp_path / "Data")
+
+    assert not (tmp_path / "Backups" / "2026-10-29 1405").exists()
+
+
+def test_journal_trouble_does_not_stop_the_run(case: Path, tmp_path: Path) -> None:
+    data = tmp_path / "Data"
+    data.mkdir()
+    journal = data / "temp-files.txt"
+    journal.write_text("held by antivirus\n", encoding="utf-8")
+
+    with lock_bytes(journal):
+        result = run(case, settings_for(tmp_path, SaveMode.COPY), data)
+
+    assert [row.status for row in result.results] == [
+        Status.COMPRESSED,
+        Status.ALREADY_SMALL,
+        Status.COMPRESSED,
+    ]
+
+
+def test_corrupt_journal_is_ignored(tmp_path: Path) -> None:
+    data = tmp_path / "Data"
+    data.mkdir()
+    (data / "temp-files.txt").write_bytes(bytes([0xFF, 0xFE, 0x00, 0x7B]))
+
+    assert remove_leftover_temps(data) == 0
 
 
 def test_cancel_after_current_file(case: Path, tmp_path: Path) -> None:

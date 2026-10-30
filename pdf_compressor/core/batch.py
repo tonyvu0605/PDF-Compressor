@@ -46,14 +46,20 @@ def temp_path_for(dest: Path) -> Path:
 
 
 def backup_run_dir(backup_dir: Path, now: datetime) -> Path:
-    """Return a backup folder for this run that no earlier run has used."""
+    """Create and return a backup folder for this run that no other run uses."""
     stamp = f"{now:%Y-%m-%d %H%M}"
-    folder = backup_dir / stamp
-    number = 2
-    while folder.exists():
-        folder = backup_dir / f"{stamp} ({number})"
-        number += 1
-    return folder
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    number = 1
+    while True:
+        folder = backup_dir / (stamp if number == 1 else f"{stamp} ({number})")
+        try:
+            # mkdir either claims the folder or fails, so a second window
+            # starting a run in the same minute moves on to the next name.
+            folder.mkdir()
+        except FileExistsError:
+            number += 1
+        else:
+            return folder
 
 
 def run_batch(
@@ -98,6 +104,8 @@ def run_batch(
             results.append(result)
     finally:
         remove_leftover_temps(data_dir)
+        if backups is not None:
+            _remove_if_empty(backups)
 
     batch = BatchResult(results=results, total=total, cancelled=cancelled)
     logger.info("Run finished: %s", summary_text(batch))
@@ -110,6 +118,12 @@ def remove_leftover_temps(data_dir: Path) -> int:
     try:
         lines = journal.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
+        return 0
+    except (OSError, ValueError):
+        # Cleanup is best effort: it must never stop the app or end a run.
+        logger.warning(
+            "Could not read the temp file journal %s", journal, exc_info=True
+        )
         return 0
     removed = 0
     kept: list[str] = []
@@ -124,9 +138,11 @@ def remove_leftover_temps(data_dir: Path) -> int:
                 removed += 1
         except OSError:
             # Another window may still be writing it.
-            logger.warning("Could not delete leftover temp file %s", path)
+            logger.warning(
+                "Could not delete leftover temp file %s", path, exc_info=True
+            )
             kept.append(line)
-    journal.write_text("".join(f"{line}\n" for line in kept), encoding="utf-8")
+    _write_journal(journal, kept)
     return removed
 
 
@@ -192,6 +208,12 @@ def _place(
     if result.status is Status.COMPRESSED:
         if backups is not None:
             backup = backups / job.layout
+            if backup.exists():
+                # A backup may be the only copy of an original: never replace it.
+                logger.error(
+                    "Backup %s already exists; %s not changed", backup, job.source
+                )
+                return _not_done(job, settings, Status.FAILED, BACKUP_FAILED)
             try:
                 backup.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(job.source, backup)
@@ -236,5 +258,27 @@ def _discard_temp(tmp: Path, journal: Path) -> None:
         lines = journal.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError:
         return
-    remaining = [line for line in lines if line != str(tmp)]
-    journal.write_text("".join(f"{line}\n" for line in remaining), encoding="utf-8")
+    except (OSError, ValueError):
+        # A stale line only costs a lookup at the next cleanup.
+        logger.warning(
+            "Could not read the temp file journal %s", journal, exc_info=True
+        )
+        return
+    _write_journal(journal, [line for line in lines if line != str(tmp)])
+
+
+def _write_journal(journal: Path, lines: list[str]) -> None:
+    try:
+        journal.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+    except OSError:
+        logger.warning(
+            "Could not update the temp file journal %s", journal, exc_info=True
+        )
+
+
+def _remove_if_empty(folder: Path) -> None:
+    try:
+        if not any(folder.iterdir()):
+            folder.rmdir()
+    except OSError:
+        logger.warning("Could not tidy the backup folder %s", folder, exc_info=True)
