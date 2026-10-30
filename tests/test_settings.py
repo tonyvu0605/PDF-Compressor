@@ -36,7 +36,7 @@ def test_missing_file_gives_defaults(tmp_path: Path, docs: Path) -> None:
 
 def test_round_trip(tmp_path: Path, docs: Path) -> None:
     path = tmp_path / "settings.json"
-    output = tmp_path / "Out ñ"
+    output = tmp_path / "Out \u00f1"
     settings = Settings(
         SaveMode.BACKUP, output, tmp_path / "Backups", Level.HIGH, 9.5, False
     )

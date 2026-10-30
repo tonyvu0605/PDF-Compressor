@@ -5,7 +5,7 @@ import pytest
 
 # An n-tilde, a curly apostrophe and a letter outside cp1252, so every path
 # operation is exercised with names a client folder can really have.
-BASE = "Client Files ñ O’Brien ễ"
+BASE = "Client Files \u00f1 O\u2019Brien \u1ec5"
 
 SYSTEM_VARS = (
     "WINDIR",
