@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-compressor"
+version = "1.0.0"
+description = "Batch-compresses PDFs for court and government e-filing."
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "PySide6-Essentials",
+    "pymupdf~=1.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "pyinstaller",
+]
+
+[tool.setuptools.packages.find]
+include = ["pdf_compressor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
