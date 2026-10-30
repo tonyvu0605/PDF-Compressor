@@ -85,6 +85,20 @@ def test_bad_field_falls_back(tmp_path: Path, docs: Path) -> None:
     )
 
 
+def test_relative_folder_falls_back(tmp_path: Path, docs: Path) -> None:
+    # A relative folder would land wherever the app happened to start.
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps({"output_dir": "Compressed", "backup_dir": "Backups\\Old"}),
+        encoding="utf-8",
+    )
+
+    loaded = load_settings(path, docs)
+
+    assert loaded.output_dir == docs / "Compressed PDFs"
+    assert loaded.backup_dir == docs / "PDF Backups"
+
+
 def test_data_dir(tmp_path: Path) -> None:
     app = tmp_path / "app"
     app.mkdir()

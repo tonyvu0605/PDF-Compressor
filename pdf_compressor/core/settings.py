@@ -149,7 +149,8 @@ def _enum_or[E: Enum](value: object, kind: type[E], default: E) -> E:
 
 
 def _path_or(value: object, default: Path) -> Path:
-    if isinstance(value, str) and value.strip():
+    # A relative folder would resolve against wherever the app was started.
+    if isinstance(value, str) and value.strip() and Path(value).is_absolute():
         return Path(value)
     return default
 
