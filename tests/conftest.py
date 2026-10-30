@@ -1,6 +1,11 @@
 import _winapi
+import msvcrt
+import os
 import random
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
+from typing import BinaryIO
 
 import pymupdf
 import pytest
@@ -347,3 +352,26 @@ def signed_pdf(pdf_dir: Path) -> Path:
 @pytest.fixture
 def empty_sig_pdf(pdf_dir: Path) -> Path:
     return build_signature_pdf(pdf_dir / "empty signature.pdf", signed=False)
+
+
+@contextmanager
+def hold_open(path: Path) -> Iterator[BinaryIO]:
+    """Keep a file open the way a PDF viewer does: reads work, replacing fails."""
+    with path.open("rb") as file:
+        yield file
+
+
+@contextmanager
+def lock_bytes(path: Path) -> Iterator[None]:
+    """Lock every byte of a file, so reading it fails until the block ends."""
+    size = path.stat().st_size
+    fd = os.open(path, os.O_RDWR)
+    try:
+        msvcrt.locking(fd, msvcrt.LK_NBLCK, size)
+        try:
+            yield
+        finally:
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_UNLCK, size)
+    finally:
+        os.close(fd)
