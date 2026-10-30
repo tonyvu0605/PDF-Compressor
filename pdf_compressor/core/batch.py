@@ -19,9 +19,11 @@ from pdf_compressor.core.compress import (
     format_mb,
 )
 from pdf_compressor.core.scan import Job, ScanResult
-from pdf_compressor.core.settings import SaveMode, Settings
+from pdf_compressor.core.settings import Level, SaveMode, Settings
 
 logger = logging.getLogger(__name__)
+
+Compress = Callable[[Path, Path, Level, bool, float | None], FileResult]
 
 TEMP_SUFFIX = ".pdfc-tmp"
 JOURNAL_NAME = "temp-files.txt"
@@ -69,8 +71,15 @@ def run_batch(
     on_progress: Callable[[int, int, Path], None],
     data_dir: Path,
     now: datetime,
+    compress: Compress | None = None,
 ) -> BatchResult:
-    """Compress every job, stopping after the current file once cancel is set."""
+    """Compress every job, stopping after the current file once cancel is set.
+
+    Args:
+        compress: Stands in for compress_file, so the window's worker can run
+            it in a separate process.
+    """
+    compress = compress or compress_file
     data_dir.mkdir(parents=True, exist_ok=True)
     journal = data_dir / JOURNAL_NAME
     total = len(scan.jobs)
@@ -93,7 +102,7 @@ def run_batch(
                 cancelled = True
                 break
             on_progress(number, total, job.source)
-            result = _run_job(job, settings, journal, backups)
+            result = _run_job(job, settings, journal, backups, compress)
             logger.info(
                 "%s: %s (%s bytes to %s)",
                 job.source,
@@ -173,7 +182,11 @@ def _files(count: int) -> str:
 
 
 def _run_job(
-    job: Job, settings: Settings, journal: Path, backups: Path | None
+    job: Job,
+    settings: Settings,
+    journal: Path,
+    backups: Path | None,
+    compress: Compress,
 ) -> FileResult:
     replacing = settings.save_mode is not SaveMode.COPY
     if replacing and not os.access(job.source, os.W_OK):
@@ -182,7 +195,7 @@ def _run_job(
     try:
         with journal.open("a", encoding="utf-8") as file:
             file.write(f"{tmp}\n")
-        result = compress_file(
+        result = compress(
             job.source,
             tmp,
             settings.level,

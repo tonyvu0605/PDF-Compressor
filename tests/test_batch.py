@@ -3,6 +3,7 @@ import shutil
 import stat
 import threading
 from collections.abc import Callable
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import AbstractContextManager
 from datetime import datetime
 from pathlib import Path
@@ -19,7 +20,7 @@ from pdf_compressor.core.batch import (
     summary_text,
     temp_path_for,
 )
-from pdf_compressor.core.compress import FileResult, Status
+from pdf_compressor.core.compress import FileResult, Status, compress_file
 from pdf_compressor.core.scan import TEMP_NAME_ROOM, scan_inputs
 from pdf_compressor.core.settings import Level, SaveMode, Settings
 
@@ -315,6 +316,40 @@ def test_leftover_temps_removed(tmp_path: Path) -> None:
     assert held.exists()
     assert other.exists()
     assert journal.read_text(encoding="utf-8").splitlines() == [str(held)]
+
+
+def test_compress_can_run_in_another_process(case: Path, tmp_path: Path) -> None:
+    # The window's worker does this, because PyMuPDF holds the interpreter
+    # lock and would otherwise freeze the window.
+    settings = settings_for(tmp_path, SaveMode.COPY)
+    with ProcessPoolExecutor(max_workers=1) as pool:
+
+        def in_child(
+            source: Path,
+            tmp: Path,
+            level: Level,
+            remove_hidden_info: bool,
+            size_limit_mb: float | None,
+        ) -> FileResult:
+            arguments = (source, tmp, level, remove_hidden_info, size_limit_mb)
+            return pool.submit(compress_file, *arguments).result()
+
+        result = run_batch(
+            scan_inputs([case], settings),
+            settings,
+            threading.Event(),
+            lambda number, total, source: None,
+            tmp_path / "Data",
+            NOW,
+            in_child,
+        )
+
+    assert [row.status for row in result.results] == [
+        Status.COMPRESSED,
+        Status.ALREADY_SMALL,
+        Status.COMPRESSED,
+    ]
+    assert temp_files(tmp_path) == []
 
 
 def test_temp_name_fits(tmp_path: Path) -> None:

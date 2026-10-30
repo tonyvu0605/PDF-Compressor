@@ -1,6 +1,7 @@
 """Start PDF Compressor, loading any files and folders passed on the command line."""
 
 import logging
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -8,7 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 
-import pymupdf
 from PySide6.QtWidgets import QApplication
 
 # Absolute imports: PyInstaller runs this file as a script, not as a package.
@@ -23,6 +23,7 @@ from pdf_compressor.core.settings import (
     writable_dir,
 )
 from pdf_compressor.gui.main_window import MainWindow
+from pdf_compressor.gui.worker import configure_logging
 
 BASE_FONT_POINTS = 12
 
@@ -37,16 +38,7 @@ def main(argv: list[str]) -> int:
     # AppData, then the temp folder, instead of failing before any window.
     fallbacks = [preferred, appdata / APP_NAME, Path(tempfile.gettempdir()) / APP_NAME]
     data = writable_dir(list(dict.fromkeys(fallbacks)))
-    # delay=True: a launch that logs nothing leaves no log file behind.
-    handler = logging.FileHandler(
-        new_log_path(data / "logs", datetime.now()), delay=True, encoding="utf-8"
-    )
-    logging.basicConfig(
-        handlers=[handler],
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-    pymupdf.set_messages(pylogging=True, pylogging_level=logging.WARNING)
+    configure_logging(new_log_path(data / "logs", datetime.now()))
     sys.excepthook = _log_uncaught
     if data != preferred:
         logger.warning(
@@ -77,4 +69,7 @@ def _log_uncaught(
 
 
 if __name__ == "__main__":
+    # The frozen app runs this file again for every worker process;
+    # freeze_support turns those runs into workers before a window opens.
+    multiprocessing.freeze_support()
     sys.exit(main(sys.argv))
