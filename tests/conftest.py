@@ -208,18 +208,63 @@ def build_encrypted_pdf(path: Path, user_password: str) -> Path:
     )
 
 
-def build_truncated_pdf(path: Path) -> Path:
-    """Write a PDF that MuPDF opens only by repairing it."""
+def _six_pages() -> pymupdf.Document:
     doc = pymupdf.open()
     for number in range(6):
         doc.new_page().insert_text((72, 72), f"Page {number + 1}")
+    return doc
+
+
+def _load_every_object(doc: pymupdf.Document) -> None:
+    for xref in range(1, doc.xref_length()):
+        doc.xref_get_key(xref, "Type")
+
+
+def build_truncated_pdf(path: Path) -> Path:
+    """Write a PDF cut short: it opens only by repair, with its last pages blank."""
+    doc = _six_pages()
+    last_content = doc[5].get_contents()[0]
     data = doc.tobytes()
     doc.close()
-    cut = data[: data.rindex(b"xref")]
+    # The last page's content is the last object, so the cut loses only it
+    # and the cross-reference table after it.
+    cut = data[: data.index(f"\n{last_content} 0 obj".encode()) + 1]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(cut)
     with pymupdf.open(stream=cut, filetype="pdf") as check:
         assert check.is_repaired
+        assert any(not page.get_text().strip() for page in check)
+    return path
+
+
+def build_lazy_damaged_pdf(path: Path) -> Path:
+    """Write a PDF whose damage MuPDF repairs only once the bad object loads."""
+    doc = _six_pages()
+    content = doc[2].get_contents()[0]
+    data = bytearray(doc.tobytes())
+    doc.close()
+    start = data.index(f"\n{content} 0 obj".encode()) + 1
+    end = data.index(b"endobj", start) + len(b"endobj")
+    data[start:end] = bytes(end - start)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(bytes(data))
+    with pymupdf.open(stream=bytes(data), filetype="pdf") as check:
+        assert not check.is_repaired
+        _load_every_object(check)
+        assert check.is_repaired
+    return path
+
+
+def build_objstm_damaged_pdf(path: Path) -> Path:
+    """Write a PDF with object streams, one of them corrupted."""
+    doc = _six_pages()
+    data = bytearray(doc.tobytes(garbage=3, deflate=True, use_objstms=True))
+    doc.close()
+    body = data.index(b"stream", data.index(b"/ObjStm")) + len(b"stream")
+    body += 2 if data[body : body + 2] == b"\r\n" else 1
+    data[body + 2 : body + 10] = bytes(8)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(bytes(data))
     return path
 
 
@@ -337,6 +382,16 @@ def damaged_pdf(pdf_dir: Path) -> Path:
 @pytest.fixture
 def truncated_pdf(pdf_dir: Path) -> Path:
     return build_truncated_pdf(pdf_dir / "truncated.pdf")
+
+
+@pytest.fixture
+def lazy_damaged_pdf(pdf_dir: Path) -> Path:
+    return build_lazy_damaged_pdf(pdf_dir / "lazy damaged.pdf")
+
+
+@pytest.fixture
+def objstm_damaged_pdf(pdf_dir: Path) -> Path:
+    return build_objstm_damaged_pdf(pdf_dir / "objstm damaged.pdf")
 
 
 @pytest.fixture

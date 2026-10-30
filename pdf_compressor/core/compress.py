@@ -59,6 +59,10 @@ _COUNT_FOR_DEVICE_SPACE = MappingProxyType(
 _COUNT_FOR_FAMILY = MappingProxyType({"CalGray": 1, "CalRGB": 3, "Lab": 3})
 
 
+class DamagedError(Exception):
+    """MuPDF had to repair the file while compressing it, so it is damaged."""
+
+
 class Status(Enum):
     """What happened to one file."""
 
@@ -204,6 +208,10 @@ def _compress(
         if _page_count(tmp) != pages:
             logger.warning("Page count changed for %s; keeping the original", source)
             return _already_small(source, before, tmp, limit, size_limit_mb)
+    except DamagedError:
+        logger.warning("%s needed repairing while compressing; skipped", source)
+        tmp.unlink(missing_ok=True)
+        return _skipped(source, before, SKIP_DAMAGED, limit)
     except PYMUPDF_ERRORS:
         logger.exception("Could not compress %s; keeping the original", source)
         return _already_small(source, before, tmp, limit, size_limit_mb)
@@ -224,9 +232,14 @@ def _check(data: bytes) -> tuple[str | None, int]:
             if is_secured(doc):
                 return SKIP_SECURED, 0
             # A truncated file opens by repair with its pages blank.
-            if doc.is_repaired or doc.page_count == 0:
+            if doc.page_count == 0 or doc.is_repaired:
                 return SKIP_DAMAGED, 0
-            if has_signature(doc):
+            signed = has_signature(doc)
+            # MuPDF repairs lazily, when a broken object first loads, and
+            # has_signature loads them all.
+            if doc.is_repaired:
+                return SKIP_DAMAGED, 0
+            if signed:
                 return SKIP_SIGNED, 0
             return None, doc.page_count
     except PYMUPDF_ERRORS:
@@ -242,6 +255,10 @@ def _run_pipeline(
         doc.subset_fonts()
         if remove_hidden_info:
             clear_hidden_info(doc)
+        # The steps above load every object, so a lazy repair has happened by
+        # now; saving it would turn damage into blank pages.
+        if doc.is_repaired:
+            raise DamagedError(out)
         # garbage=4 also merges duplicates but takes seconds on long scans.
         doc.save(out, garbage=3, deflate=True, use_objstms=True)
 
@@ -297,7 +314,7 @@ def _declared_components(doc: pymupdf.Document, xref: int) -> int | None:
     if family is None:
         return None
     if family.group(1) == "ICCBased":
-        profile = re.search(r"/ICCBased\s+(\d+)\s+0\s+R", value)
+        profile = re.search(r"/ICCBased\s+(\d+)\s+\d+\s+R", value)
         if profile is None:
             return None
         count = doc.xref_get_key(int(profile.group(1)), "N")[1]

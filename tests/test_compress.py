@@ -218,6 +218,8 @@ def test_format_mb() -> None:
         ("owner_only_pdf", SECURED),
         ("damaged_pdf", DAMAGED),
         ("truncated_pdf", DAMAGED),
+        ("lazy_damaged_pdf", DAMAGED),
+        ("objstm_damaged_pdf", DAMAGED),
         ("signed_pdf", "Skipped: digitally signed"),
         ("zero_byte", DAMAGED),
         ("missing", "Skipped: file not found"),
@@ -256,6 +258,28 @@ def test_skipped_file_over_limit_keeps_reason(
     assert result.status is Status.SKIPPED
     assert result.message == SECURED
     assert result.over_limit is True
+
+
+def test_pipeline_refuses_a_file_it_had_to_repair(
+    lazy_damaged_pdf: Path, tmp_path: Path
+) -> None:
+    out = tmp_path / "out.pdf"
+
+    with pytest.raises(compress.DamagedError):
+        run_pipeline(lazy_damaged_pdf, out)
+
+    assert not out.exists()
+
+
+def test_icc_profile_found_at_any_generation(gray_icc_pdf: Path) -> None:
+    with pymupdf.open(gray_icc_pdf) as doc:
+        image = doc[0].get_images()[0][0]
+        # The image points at an array object that names the profile stream.
+        array = int(doc.xref_get_key(image, "ColorSpace")[1].split()[0])
+        profile = re.search(r"/ICCBased\s+(\d+)", doc.xref_object(array)).group(1)
+        doc.xref_set_key(image, "ColorSpace", f"[/ICCBased {profile} 1 R]")
+
+        assert compress._declared_components(doc, image) == 1
 
 
 def test_has_signature(signed_pdf: Path, empty_sig_pdf: Path, text_pdf: Path) -> None:
