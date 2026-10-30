@@ -14,6 +14,7 @@ Run this once before handing the app over, using the build from `.\build.ps1`. W
 - [ ] Replace originals, no backup asks "Are you sure? Your original files can't be recovered." first.
 - [ ] During a run the bar counts files and the label under it shows the current file name.
 - [ ] Cancel stops after the current file.
+- [ ] While a long scanned filing is being compressed, the window still moves and Cancel responds within a second.
 - [ ] Closing the window during a run asks first, stops after the current file, and leaves no `~*.pdfc-tmp` file next to the PDFs.
 - [ ] A 0.1 MB size limit turns the rows of larger files light red, with "Still ... MB. That's over your 0.1 MB limit, so it may need splitting."
 - [ ] Open Folder opens the output folder for copies, or the folder of the first file in the replace modes.
@@ -32,6 +33,7 @@ Run this once before handing the app over, using the build from `.\build.ps1`. W
 
 - [ ] Unzipped anywhere, the app keeps `settings.json` and `logs\` next to the exe and writes nothing to `%APPDATA%\PDF Compressor`.
 - [ ] The portable copy adds no Send To entry.
+- [ ] Unzipped into a folder you can't write to, the portable copy still opens, keeps its settings in `%APPDATA%\PDF Compressor`, and compresses normally.
 
 ## Both
 
