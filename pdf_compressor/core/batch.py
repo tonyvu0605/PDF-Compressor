@@ -180,6 +180,16 @@ def summary_text(batch: BatchResult) -> str:
     return text
 
 
+def short_names(paths: list[Path]) -> list[str]:
+    """Return each path below the folder they all share, so same names stay apart."""
+    try:
+        shared = Path(os.path.commonpath([path.parent for path in paths]))
+    except ValueError:
+        # No paths, or paths on different drives.
+        return [str(path) for path in paths]
+    return [str(path.relative_to(shared)) for path in paths]
+
+
 def _files(count: int) -> str:
     return f"{count} file" if count == 1 else f"{count} files"
 

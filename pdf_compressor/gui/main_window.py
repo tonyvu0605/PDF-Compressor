@@ -40,7 +40,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pdf_compressor.core.batch import BatchResult, summary_text
+from pdf_compressor.core.batch import BatchResult, short_names, summary_text
 from pdf_compressor.core.compress import FileResult, format_mb
 from pdf_compressor.core.safety import blocked_reason
 from pdf_compressor.core.scan import ScanResult
@@ -525,10 +525,11 @@ class MainWindow(QMainWindow):
 
     def _fill_table(self, results: list[FileResult]) -> None:
         self._table.setRowCount(len(results))
-        for row, result in enumerate(results):
+        names = short_names([result.source for result in results])
+        for row, (result, name) in enumerate(zip(results, names, strict=True)):
             after = "" if result.after is None else format_mb(result.after)
             cells = [
-                result.source.name,
+                name,
                 format_mb(result.before),
                 after,
                 result.message,

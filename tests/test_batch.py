@@ -17,6 +17,7 @@ from pdf_compressor.core.batch import (
     backup_run_dir,
     remove_leftover_temps,
     run_batch,
+    short_names,
     summary_text,
     temp_path_for,
 )
@@ -419,3 +420,19 @@ def test_summary_text() -> None:
     assert summary_text(BatchResult([skipped, failed], 2, False)) == (
         "2 files: none could be compressed. 2 skipped."
     )
+
+
+def test_short_names() -> None:
+    case = Path("C:/Clients/Smith Case")
+    assert short_names([case / "a.pdf", case / "b.pdf"]) == ["a.pdf", "b.pdf"]
+    # Same-named files in different folders stay apart.
+    exhibits = [case / "Exhibits" / "A.pdf", case / "Motions" / "A.pdf"]
+    assert short_names([*exhibits, case / "brief.pdf"]) == [
+        str(Path("Exhibits", "A.pdf")),
+        str(Path("Motions", "A.pdf")),
+        "brief.pdf",
+    ]
+    # Paths on different drives share no folder, so they show in full.
+    apart = [Path("C:/x/a.pdf"), Path("D:/y/a.pdf")]
+    assert short_names(apart) == [str(path) for path in apart]
+    assert short_names([]) == []
