@@ -282,7 +282,12 @@ def _discard_temp(tmp: Path, journal: Path) -> None:
 
 def _write_journal(journal: Path, lines: list[str]) -> None:
     try:
-        journal.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+        if lines:
+            journal.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+        else:
+            # An empty journal would linger in the data folder, which for the
+            # portable copy is next to the exe.
+            journal.unlink(missing_ok=True)
     except OSError:
         logger.warning(
             "Could not update the temp file journal %s", journal, exc_info=True

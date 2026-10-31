@@ -206,13 +206,14 @@ def test_cancel_after_current_file(case: Path, tmp_path: Path) -> None:
     cancel = threading.Event()
     reported: list[tuple[int, int]] = []
     journal = tmp_path / "Data" / "temp-files.txt"
-    journal_before_file_2: list[str] = []
+    journal_before_file_2: list[bool] = []
 
     def on_progress(number: int, total: int, source: Path) -> None:
         reported.append((number, total))
         if number == 2:
-            # File 1 is finished, so its temp file has left the journal.
-            journal_before_file_2.append(journal.read_text(encoding="utf-8"))
+            # File 1 is finished, so its temp file has left the journal, and
+            # an empty journal is deleted.
+            journal_before_file_2.append(journal.exists())
             cancel.set()
 
     result = run(
@@ -224,12 +225,12 @@ def test_cancel_after_current_file(case: Path, tmp_path: Path) -> None:
     )
 
     assert reported == [(1, 3), (2, 3)]
-    assert journal_before_file_2 == [""]
+    assert journal_before_file_2 == [False]
     assert len(result.results) == 2
     assert result.total == 3
     assert result.cancelled is True
     assert temp_files(tmp_path) == []
-    assert journal.read_text(encoding="utf-8") == ""
+    assert not journal.exists()
 
 
 @pytest.mark.parametrize(
