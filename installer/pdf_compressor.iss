@@ -30,6 +30,11 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 
+[InstallDelete]
+; An upgrade must not keep libraries that an older build had and this one
+; dropped. Settings and logs live in %APPDATA%, so nothing of his is here.
+Type: filesandordirs; Name: "{app}\_internal"
+
 [Files]
 ; portable.txt belongs only in the portable zip; installed, it would make the
 ; app keep its settings in the program folder.
