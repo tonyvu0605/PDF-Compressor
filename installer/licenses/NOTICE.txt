@@ -11,7 +11,7 @@ WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See LICENSE.txt in
 this folder for more details.
 
-You can get its source code from whoever gave you this copy.
+Its source code is at https://github.com/tonyvu0605/PDF-Compressor.
 
 
 Software included in PDF Compressor
