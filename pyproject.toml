@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdf-compressor"
-version = "1.0.0"
+version = "0.1.0"
 description = "Batch-compresses PDFs for court and government e-filing."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
