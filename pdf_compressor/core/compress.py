@@ -207,7 +207,14 @@ def _compress(
         _run_pipeline(data, tmp, LEVELS[level], remove_hidden_info)
         after = tmp.stat().st_size
         if limit is not None and after > limit and level is not Level.HIGH:
+            # Kept in memory rather than in a second temp file, which the
+            # temp file journal would not know to clean up.
+            first = tmp.read_bytes()
             _run_pipeline(data, tmp, LEVELS[Level.HIGH], remove_hidden_info)
+            if tmp.stat().st_size >= len(first):
+                # High can come out bigger when it re-encodes images that the
+                # first level left alone.
+                tmp.write_bytes(first)
             after = tmp.stat().st_size
         if _page_count(tmp) != pages:
             logger.warning("Page count changed for %s; keeping the original", source)

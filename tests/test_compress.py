@@ -189,6 +189,30 @@ def test_size_limit_retry(
     assert roomy.over_limit is False
 
 
+def test_retry_keeps_the_smaller_result(
+    scan_pdf: Path, tmp_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    medium = run_pipeline(scan_pdf, tmp_path / "medium.pdf").stat().st_size
+    real_pipeline = compress._run_pipeline
+
+    def high_comes_out_bigger(
+        data: bytes, out: Path, params: LevelParams, hidden: bool
+    ) -> None:
+        # High can grow a file when it re-encodes images Medium left alone;
+        # Low's bigger output stands in for that.
+        if params == LEVELS[Level.HIGH]:
+            params = LEVELS[Level.LOW]
+        real_pipeline(data, out, params, hidden)
+
+    monkeypatch.setattr(compress, "_run_pipeline", high_comes_out_bigger)
+
+    result = compress_file(scan_pdf, tmp_file, Level.MEDIUM, True, 0.01)
+
+    assert result.status is Status.COMPRESSED
+    assert result.after == medium
+    assert tmp_file.stat().st_size == medium
+
+
 def test_limit_beats_ten_percent(
     scan_pdf: Path, tmp_file: Path, tmp_path: Path
 ) -> None:
