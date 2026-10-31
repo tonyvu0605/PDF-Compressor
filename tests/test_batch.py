@@ -89,6 +89,23 @@ def test_copy_mode(case: Path, tmp_path: Path) -> None:
     assert temp_files(tmp_path) == []
 
 
+def test_copy_mode_copies_skipped_files_unchanged(
+    tmp_path: Path, signed_pdf: Path, encrypted_pdf: Path, damaged_pdf: Path
+) -> None:
+    # The output folder must hold every file, ready to upload.
+    folder = tmp_path / BASE / "Smith Case"
+    folder.mkdir(parents=True)
+    for source in (signed_pdf, encrypted_pdf, damaged_pdf):
+        shutil.copyfile(source, folder / source.name)
+    originals = contents(folder)
+
+    result = run(folder, settings_for(tmp_path, SaveMode.COPY), tmp_path / "Data")
+
+    assert [row.status for row in result.results] == [Status.SKIPPED] * 3
+    assert contents(tmp_path / "Output" / "Smith Case") == originals
+    assert temp_files(tmp_path) == []
+
+
 def test_backup_mode(case: Path, tmp_path: Path) -> None:
     originals = contents(case)
 
@@ -254,6 +271,7 @@ def test_locked_file_reported(
     assert first.status is Status.SKIPPED
     assert first.message == IN_USE
     assert target.read_bytes() == original
+    assert not (tmp_path / "Output" / "Smith Case" / target.name).exists()
     assert result.results[2].status is Status.COMPRESSED
     assert temp_files(tmp_path) == []
 

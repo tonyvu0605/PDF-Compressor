@@ -10,7 +10,7 @@ Windows may show a blue box that says "Windows protected your PC". This happens 
 
 1. Open PDF Compressor from the Start menu or the desktop.
 2. Click Add Folder or Add Files, or drag files onto the window.
-3. Choose how to save. Save compressed copies is the safe choice: your files stay as they are, and the smaller copies go to the Compressed PDFs folder in Documents.
+3. Choose how to save. Save compressed copies is the safe choice: your files stay as they are, and the smaller copies go to the Compressed PDFs folder in Documents. Files that can't be made smaller are copied there as they are, so that folder holds every file.
 4. Click Start, read the summary, and click Start again.
 5. When it is done, click Open Folder to see the smaller files.
 

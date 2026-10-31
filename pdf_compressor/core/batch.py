@@ -13,6 +13,7 @@ from pathlib import Path
 from pdf_compressor.core.compress import (
     MB,
     SKIP_IN_USE,
+    SKIP_MISSING,
     FileResult,
     Status,
     compress_file,
@@ -31,6 +32,8 @@ JOURNAL_NAME = "temp-files.txt"
 READ_ONLY = "Skipped: the file is read-only"
 BACKUP_FAILED = "Not changed: the backup copy failed"
 SOMETHING_WENT_WRONG = "Not changed: something went wrong with this file"
+# compress_file gives these reasons when it could not read the file at all.
+UNREADABLE = frozenset({SKIP_IN_USE, SKIP_MISSING})
 
 
 @dataclass
@@ -234,7 +237,10 @@ def _place(
                 logger.exception("Backup copy of %s failed", job.source)
                 return _not_done(job, settings, Status.FAILED, BACKUP_FAILED)
         return _move_into_place(result, job, tmp, settings)
-    if result.status is Status.ALREADY_SMALL and settings.save_mode is SaveMode.COPY:
+    if settings.save_mode is SaveMode.COPY and result.message not in UNREADABLE:
+        # Every file that isn't compressed is copied unchanged, so the output
+        # folder holds every file and is ready to upload. A failed copy goes
+        # to _run_job's handler, so no row claims a file that isn't there.
         # copyfile, not copy2: copy2 would carry a read-only attribute over.
         job.dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(job.source, tmp)
