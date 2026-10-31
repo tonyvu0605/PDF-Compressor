@@ -102,6 +102,9 @@ def compress_file(
 
 def format_mb(size: int) -> str:
     """Show a size in decimal megabytes: one decimal from 1 MB up, two below."""
+    if 0 < size < MB // 100:
+        # Rounded to 0 MB, a small file would look empty.
+        return "under 0.01 MB"
     value = size / MB
     digits = f"{value:.1f}" if value >= 1 else f"{value:.2f}"
     return f"{digits.rstrip('0').rstrip('.')} MB"

@@ -209,6 +209,11 @@ def test_format_mb() -> None:
     assert format_mb(14_200_000) == "14.2 MB"
     assert format_mb(412_000_000) == "412 MB"
     assert format_mb(40_000) == "0.04 MB"
+    assert format_mb(10_000) == "0.01 MB"
+    # Rounded to 0 MB, a small file would look empty.
+    assert format_mb(9_999) == "under 0.01 MB"
+    assert format_mb(3_426) == "under 0.01 MB"
+    assert format_mb(0) == "0 MB"
 
 
 @pytest.mark.parametrize(
