@@ -9,6 +9,7 @@ from typing import BinaryIO
 
 import pymupdf
 import pytest
+from pymupdf import mupdf
 
 # An n-tilde, a curly apostrophe and a letter outside cp1252, so every path
 # operation is exercised with names a client folder can really have.
@@ -163,6 +164,22 @@ def _image_pdf(
     )
     if color_space_object:
         doc.xref_set_key(xref, "ColorSpace", color_space_object)
+    return _save(doc, path)
+
+
+def build_jpx_pdf(path: Path) -> Path:
+    """Write a page with a 300 dpi JPEG 2000 image, as Acrobat's optimizer saves."""
+    pixmap = _gradient_pixmap(pymupdf.csRGB)
+    # PyMuPDF's own writers have no JPEG 2000 option, so ask MuPDF directly.
+    encoded = mupdf.fz_new_buffer_from_pixmap_as_jpx(
+        pixmap.this, mupdf.FzColorParams(), 80
+    )
+    doc = pymupdf.open()
+    page = doc.new_page(width=216, height=216)
+    page.insert_image(
+        pymupdf.Rect(36, 36, 180, 180), stream=bytes(mupdf.fz_buffer_extract(encoded))
+    )
+    page.insert_text((36, 200), "Exhibit J", fontsize=10)
     return _save(doc, path)
 
 
@@ -349,6 +366,11 @@ def cmyk_pdf(pdf_dir: Path) -> Path:
 def calgray_pdf(pdf_dir: Path) -> Path:
     calgray = "[/CalGray <</WhitePoint [0.9505 1 1.089]>>]"
     return _image_pdf(pdf_dir / "calgray.pdf", pymupdf.csGRAY, calgray)
+
+
+@pytest.fixture
+def jpx_pdf(pdf_dir: Path) -> Path:
+    return build_jpx_pdf(pdf_dir / "jpx.pdf")
 
 
 @pytest.fixture

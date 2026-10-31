@@ -64,6 +64,22 @@ def test_scan_pdf_compresses(scan_pdf: Path, tmp_file: Path) -> None:
         assert doc.xref_get_key(image, "Height")[1] == "750"
 
 
+def test_jpeg2000_scan_compresses(jpx_pdf: Path, tmp_file: Path) -> None:
+    with pymupdf.open(jpx_pdf) as doc:
+        image = doc[0].get_images()[0][0]
+        assert doc.xref_get_key(image, "Filter")[1] == "/JPXDecode"
+
+    result = compress_file(jpx_pdf, tmp_file, Level.MEDIUM, True, None)
+
+    assert result.status is Status.COMPRESSED
+    with pymupdf.open(tmp_file) as doc:
+        image = doc[0].get_images()[0][0]
+        assert doc.xref_get_key(image, "Filter")[1] == "/DCTDecode"
+        # 600 pixels across 2 inches is 300 dpi; Medium resamples to 150.
+        assert doc.xref_get_key(image, "Width")[1] == "300"
+        assert "Exhibit J" in doc[0].get_text()
+
+
 @pytest.mark.parametrize("fixture", ["gray_icc_pdf", "cmyk_pdf", "calgray_pdf"])
 def test_colorspaces_render_the_same(
     fixture: str,
