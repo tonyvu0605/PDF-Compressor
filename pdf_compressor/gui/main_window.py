@@ -403,12 +403,23 @@ class MainWindow(QMainWindow):
             self._inform(ADD_FIRST)
             return
         valid, limit = parse_limit(self._limit.text())
-        mode = self._checked_mode()
-        if not valid or mode is None:
+        if not valid:
             self._warn(BAD_LIMIT)
             return
+        self._remember_options(limit)
+
+        self._choose_page.setEnabled(False)
+        self._status.setText("Looking for PDF files...")
+        worker = ScanWorker([Path(path) for path in paths], self._settings)
+        worker.scanned.connect(self._scanned)
+        worker.crashed.connect(self._scan_crashed)
+        worker.finished.connect(self._worker_finished)
+        self._scan_worker = worker
+        worker.start()
+
+    def _remember_options(self, limit: float | None) -> None:
         self._settings = Settings(
-            save_mode=mode,
+            save_mode=self._checked_mode() or self._settings.save_mode,
             output_dir=self._output_dir,
             backup_dir=self._backup_dir,
             level=LEVEL_CHOICES[self._level.currentIndex()][0],
@@ -419,15 +430,6 @@ class MainWindow(QMainWindow):
             save_settings(self._settings, self._settings_path)
         except OSError:
             logger.exception("Could not save the settings")
-
-        self._choose_page.setEnabled(False)
-        self._status.setText("Looking for PDF files...")
-        worker = ScanWorker([Path(path) for path in paths], self._settings)
-        worker.scanned.connect(self._scanned)
-        worker.crashed.connect(self._scan_crashed)
-        worker.finished.connect(self._worker_finished)
-        self._scan_worker = worker
-        worker.start()
 
     def _scanned(self, scan: ScanResult) -> None:
         self._status.setText("")
@@ -576,8 +578,12 @@ class MainWindow(QMainWindow):
             self.close()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Close at once when idle; during a run, ask, then stop after the file."""
+        """Save the options and close when idle; during a run, ask first."""
         if not self._busy():
+            # Options count even without a run. A size limit that can't be
+            # read keeps the last saved one, so the other options still save.
+            valid, limit = parse_limit(self._limit.text())
+            self._remember_options(limit if valid else self._settings.size_limit_mb)
             event.accept()
             return
         if self._batch_worker is not None and not self._close_when_idle:
