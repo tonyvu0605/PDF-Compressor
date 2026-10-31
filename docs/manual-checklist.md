@@ -18,7 +18,11 @@ Run this once before handing the app over, using the build from `.\build.ps1`. W
 - [ ] Closing the window during a run asks first, stops after the current file, and leaves no `~*.pdfc-tmp` file next to the PDFs.
 - [ ] A 0.1 MB size limit turns the rows of larger files light red, with "Still ... MB. That's over your 0.1 MB limit, so it may need splitting."
 - [ ] Open Folder opens the output folder for copies, or the folder of the first file in the replace modes.
-- [ ] Options are the same after closing and opening the app.
+- [ ] Options are the same after closing and opening the app, even when no run was started.
+- [ ] In Save compressed copies, a signed PDF is copied unchanged into the output folder, and its row says "Skipped: digitally signed".
+- [ ] Files from different subfolders show their subfolder in the File column.
+- [ ] The window and the taskbar show the PDF Compressor icon.
+- [ ] About shows the copyright, the no-warranty notice and the license, and its link opens the licenses folder.
 
 ## Installer
 
@@ -27,6 +31,8 @@ Run this once before handing the app over, using the build from `.\build.ps1`. W
 - [ ] The Start Menu and desktop shortcuts open the app.
 - [ ] Send To shows "Compress PDF". On Windows 11 it is under "Show more options", or Shift+right-click.
 - [ ] Sending several files and a folder at once opens one window with all of them.
+- [ ] The installer and the shortcuts show the app icon.
+- [ ] Running the installer again over an installed copy works, and the app still opens.
 - [ ] Uninstalling removes the shortcuts, the Send To entry and the program folder, and keeps `%APPDATA%\PDF Compressor`.
 
 ## Portable zip
@@ -37,6 +43,7 @@ Run this once before handing the app over, using the build from `.\build.ps1`. W
 
 ## Both
 
+- [ ] The licenses folder holds NOTICE.txt, LICENSE.txt, GPL-3.0.txt, LGPL-3.0.txt and the python folder's LICENSE.txt.
 - [ ] The installed and the portable copy both contain `licenses\`.
 
 ## Before handover
