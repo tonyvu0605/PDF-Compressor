@@ -44,6 +44,7 @@ SKIP_SIGNED = "Skipped: digitally signed"
 SKIP_DAMAGED = "Skipped: can't be opened (it may be damaged)"
 SKIP_IN_USE = "Skipped: open in another program"
 SKIP_MISSING = "Skipped: file not found"
+COULD_NOT_COMPRESS = "Not changed: this file couldn't be compressed"
 OVER_LIMIT = (
     "Still {size}. That's over your {limit:g} MB limit, so it may need splitting."
 )
@@ -210,14 +211,14 @@ def _compress(
             after = tmp.stat().st_size
         if _page_count(tmp) != pages:
             logger.warning("Page count changed for %s; keeping the original", source)
-            return _already_small(source, before, tmp, limit, size_limit_mb)
+            return _failed(source, before, tmp, limit)
     except DamagedError:
         logger.warning("%s needed repairing while compressing; skipped", source)
         tmp.unlink(missing_ok=True)
         return _skipped(source, before, SKIP_DAMAGED, limit)
     except PYMUPDF_ERRORS:
         logger.exception("Could not compress %s; keeping the original", source)
-        return _already_small(source, before, tmp, limit, size_limit_mb)
+        return _failed(source, before, tmp, limit)
 
     fits_now = limit is not None and before > limit and after <= limit
     if not (saves_enough(before, after) or fits_now):
@@ -330,6 +331,12 @@ def _skipped(
 ) -> FileResult:
     over = limit is not None and before > limit
     return FileResult(source, before, None, Status.SKIPPED, message, over)
+
+
+def _failed(source: Path, before: int, tmp: Path, limit: float | None) -> FileResult:
+    tmp.unlink(missing_ok=True)
+    over = limit is not None and before > limit
+    return FileResult(source, before, None, Status.FAILED, COULD_NOT_COMPRESS, over)
 
 
 def _already_small(

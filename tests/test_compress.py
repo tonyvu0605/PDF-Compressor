@@ -22,6 +22,7 @@ from pdf_compressor.core.compress import (
 from pdf_compressor.core.settings import Level
 
 DAMAGED = "Skipped: can't be opened (it may be damaged)"
+COULD_NOT = "Not changed: this file couldn't be compressed"
 SECURED = "Skipped: password-protected or secured"
 SUBSET_NAME = re.compile(r"^[A-Z]{6}\+")
 
@@ -126,7 +127,9 @@ def test_page_count_mismatch(
 
     result = compress_file(scan_pdf, tmp_file, Level.MEDIUM, True, None)
 
-    assert result.status is Status.ALREADY_SMALL
+    assert result.status is Status.FAILED
+    assert result.message == COULD_NOT
+    assert result.after is None
     assert not tmp_file.exists()
 
 
@@ -143,9 +146,16 @@ def test_pipeline_error_keeps_original(
 
     result = compress_file(scan_pdf, tmp_file, Level.MEDIUM, True, None)
 
-    assert result.status is Status.ALREADY_SMALL
-    assert result.after == result.before
+    assert result.status is Status.FAILED
+    assert result.message == COULD_NOT
+    assert result.after is None
+    assert result.over_limit is False
     assert not tmp_file.exists()
+
+    # Like a skip, a failure over the limit keeps its reason and turns red.
+    over = compress_file(scan_pdf, tmp_file, Level.MEDIUM, True, 0.000001)
+    assert over.message == COULD_NOT
+    assert over.over_limit is True
 
 
 def test_size_limit_retry(

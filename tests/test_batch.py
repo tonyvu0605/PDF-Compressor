@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from conftest import BASE, hold_open, lock_bytes
 
-from pdf_compressor.core import batch
+from pdf_compressor.core import batch, compress
 from pdf_compressor.core.batch import (
     BatchResult,
     backup_run_dir,
@@ -102,6 +102,22 @@ def test_copy_mode_copies_skipped_files_unchanged(
     result = run(folder, settings_for(tmp_path, SaveMode.COPY), tmp_path / "Data")
 
     assert [row.status for row in result.results] == [Status.SKIPPED] * 3
+    assert contents(tmp_path / "Output" / "Smith Case") == originals
+    assert temp_files(tmp_path) == []
+
+
+def test_copy_mode_copies_files_that_could_not_be_compressed(
+    case: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def failing_pipeline(*args: object) -> None:
+        raise RuntimeError("simulated MuPDF failure")
+
+    monkeypatch.setattr(compress, "_run_pipeline", failing_pipeline)
+    originals = contents(case)
+
+    result = run(case, settings_for(tmp_path, SaveMode.COPY), tmp_path / "Data")
+
+    assert [row.status for row in result.results] == [Status.FAILED] * 3
     assert contents(tmp_path / "Output" / "Smith Case") == originals
     assert temp_files(tmp_path) == []
 
