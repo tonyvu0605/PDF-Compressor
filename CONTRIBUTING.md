@@ -58,9 +58,21 @@ winget install -e --id JRSoftware.InnoSetup.7 --scope user
 
 The script also fills the app's `licenses` folder from `installer\licenses\`, the project's `LICENSE` and Python's own license. To change the icon, edit `installer\app-icon.svg`, run `installer\make_icon.py`, and commit the new `pdf_compressor\gui\app.ico`. Never change the installer's `AppId`, because upgrades and the uninstaller find the install by it.
 
+Local builds are for testing. The files on the Releases page are built by GitHub Actions.
+
+## Releasing
+
+1. Set the version in `pyproject.toml`, and rename `## Unreleased` in `CHANGELOG.md` to `## <version> - <yyyy-mm-dd>`.
+2. Commit that on `main`, then tag and push it: `git tag v<version>`, then `git push origin main v<version>`.
+3. The Release workflow (`.github/workflows/release.yml`) checks that the tag matches `pyproject.toml` and that the changelog has a section for that version. It then runs the tests, runs `build.ps1` and creates a draft release with the installer, the portable zip and that changelog section as the notes.
+4. Download both files from the draft and go through the release checklist below.
+5. Publish the draft.
+
+The workflow installs the newest versions that `pyproject.toml` allows, and it compiles the installer with the Inno Setup 6 that GitHub's Windows image includes, so its files can differ from a local build. That is why the checklist runs on the draft's files. To get a build without making a release, run the Release workflow by hand from the Actions tab. The files are attached to the run.
+
 ## Release checklist
 
-Run this before handing out a build, using the output of `.\build.ps1`. Work only on copies of real filings.
+Run this on the draft release's files before publishing it. Work only on copies of real filings.
 
 ### The window
 

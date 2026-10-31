@@ -34,6 +34,8 @@ installer/
   pdf_compressor.iss Inno Setup script
   licenses/          license texts and NOTICE.txt that every build ships
 build.ps1            PyInstaller, then Inno Setup, then the portable zip
+.github/workflows/
+  release.yml        builds a version tag on GitHub and makes a draft release
 tests/               pytest for core/; conftest.py builds every test PDF
 ```
 
@@ -135,6 +137,7 @@ When a result is still over the size limit and the level wasn't High, the file i
 - PyInstaller builds one folder (`--onedir --windowed`). QtNetwork is excluded: nothing uses it, and it would pull OpenSSL DLLs from Git's folder on `PATH` into the build.
 - The Inno Setup installer is per user, so there is no admin prompt, and installs into `%LOCALAPPDATA%\Programs\PDF Compressor`. It adds Start menu and desktop shortcuts and a Compress PDF entry in Send to. Send to opens one window for all the selected items as long as their paths fit in Windows' 32,766-character command line. An upgrade deletes the old `_internal` folder before copying the new one. The uninstaller removes everything it installed and keeps the settings and logs. Never change the script's `AppId`; upgrades and the uninstaller find the install by it.
 - The portable version is the same folder zipped, plus `portable.txt`. It adds no Send to entry and makes no registry changes of its own; Windows and Qt still remember recent folders in file dialogs, Qt under `HKCU\Software\QtProject`.
+- Release builds come from the Release workflow, which runs the tests and `build.ps1` on GitHub's Windows image for a version tag and attaches the installer and the zip to a draft release.
 - The builds are unsigned, so SmartScreen warns on the first run.
 - Every build ships a `licenses` folder: `LICENSE.txt`, `GPL-3.0.txt`, `LGPL-3.0.txt`, `NOTICE.txt`, the wheels' license metadata and Python's license.
 
