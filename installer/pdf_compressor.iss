@@ -32,7 +32,7 @@ WizardStyle=modern
 
 [InstallDelete]
 ; An upgrade must not keep libraries that an older build had and this one
-; dropped. Settings and logs live in %APPDATA%, so nothing of his is here.
+; dropped. Settings and logs live in %APPDATA%, so no user data is lost.
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Files]

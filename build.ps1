@@ -10,9 +10,9 @@ param()
 $ErrorActionPreference = "Stop"
 
 function Invoke-Native([string]$Exe, [string[]]$Arguments) {
-    # PyInstaller logs to stderr. When the caller redirects this script's
-    # output, Windows PowerShell 5.1 turns each stderr line into an error
-    # record, which "Stop" would treat as fatal, so judge by the exit code.
+    # PyInstaller logs to stderr, and when output is redirected Windows
+    # PowerShell 5.1 turns each stderr line into an error record that "Stop"
+    # treats as fatal. Go by the exit code instead.
     $ErrorActionPreference = "Continue"
     & $Exe @Arguments
     if ($LASTEXITCODE -ne 0) {
@@ -58,9 +58,9 @@ try {
     }
     Write-Host "Building PDF Compressor $version"
 
-    # No hidden imports are needed. Excluding QtNetwork keeps OpenSSL DLLs
-    # from Git's PATH entry out of the build. The icon paths are absolute
-    # because PyInstaller reads relative ones against --specpath.
+    # Excluding QtNetwork keeps OpenSSL DLLs from Git's PATH entry out of the
+    # build. The icon paths are absolute because PyInstaller reads relative
+    # ones against --specpath.
     $icon = Join-Path $PSScriptRoot "pdf_compressor\gui\app.ico"
     Invoke-Native $python @(
         "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",

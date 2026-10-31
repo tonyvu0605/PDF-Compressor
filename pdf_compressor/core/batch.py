@@ -181,7 +181,7 @@ def summary_text(batch: BatchResult) -> str:
 
 
 def short_names(paths: list[Path]) -> list[str]:
-    """Return each path below the folder they all share, so same names stay apart."""
+    """Return each path relative to the deepest folder they all share."""
     try:
         shared = Path(os.path.commonpath([path.parent for path in paths]))
     except ValueError:
@@ -217,7 +217,7 @@ def _run_job(
         )
         return _place(result, job, tmp, settings, backups)
     except Exception:
-        # One file must never stop the batch, whatever went wrong with it.
+        # One bad file shouldn't stop the batch.
         logger.exception("Unexpected error with %s", job.source)
         return _not_done(job, settings, Status.FAILED, SOMETHING_WENT_WRONG)
     finally:
@@ -248,10 +248,8 @@ def _place(
                 return _not_done(job, settings, Status.FAILED, BACKUP_FAILED)
         return _move_into_place(result, job, tmp, settings)
     if settings.save_mode is SaveMode.COPY and result.message not in UNREADABLE:
-        # Every file that isn't compressed is copied unchanged, so the output
-        # folder holds every file and is ready to upload. A failed copy goes
-        # to _run_job's handler, so no row claims a file that isn't there.
-        # copyfile, not copy2: copy2 would carry a read-only attribute over.
+        # Copy it unchanged so the output folder has every file. copyfile
+        # rather than copy2, which would carry a read-only attribute over.
         job.dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(job.source, tmp)
         return _move_into_place(result, job, tmp, settings)

@@ -605,8 +605,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Save the options and close when idle; during a run, ask first."""
         if not self._busy():
-            # Options count even without a run. A size limit that can't be
-            # read keeps the last saved one, so the other options still save.
+            # Save options even without a run. An unreadable size limit
+            # keeps the saved one.
             valid, limit = parse_limit(self._limit.text())
             self._remember_options(limit if valid else self._settings.size_limit_mb)
             event.accept()

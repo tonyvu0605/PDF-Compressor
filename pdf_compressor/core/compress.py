@@ -93,7 +93,7 @@ def compress_file(
     size_limit_mb: float | None,
 ) -> FileResult:
     """Compress source into tmp, keeping tmp only when every check passes."""
-    # Warnings from earlier work belong to that work, not to this file.
+    # Clear warnings left over from earlier calls so they aren't logged here.
     _drain_warnings(None)
     try:
         return _compress(source, tmp, level, remove_hidden_info, size_limit_mb)
@@ -207,8 +207,7 @@ def _compress(
         _run_pipeline(data, tmp, LEVELS[level], remove_hidden_info)
         after = tmp.stat().st_size
         if limit is not None and after > limit and level is not Level.HIGH:
-            # Kept in memory rather than in a second temp file, which the
-            # temp file journal would not know to clean up.
+            # Held in memory: a second temp file wouldn't be in the journal.
             first = tmp.read_bytes()
             _run_pipeline(data, tmp, LEVELS[Level.HIGH], remove_hidden_info)
             if tmp.stat().st_size >= len(first):
