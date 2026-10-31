@@ -1,6 +1,7 @@
 """The main window: add PDFs, choose how to save them, run, and read the results."""
 
 import html
+import importlib.metadata
 import logging
 import math
 import os
@@ -14,6 +15,7 @@ from PySide6.QtGui import (
     QDesktopServices,
     QDragEnterEvent,
     QDropEvent,
+    QIcon,
 )
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -44,7 +46,13 @@ from pdf_compressor.core.batch import BatchResult, short_names, summary_text
 from pdf_compressor.core.compress import FileResult, format_mb
 from pdf_compressor.core.safety import blocked_reason
 from pdf_compressor.core.scan import ScanResult
-from pdf_compressor.core.settings import Level, SaveMode, Settings, save_settings
+from pdf_compressor.core.settings import (
+    Level,
+    SaveMode,
+    Settings,
+    app_dir,
+    save_settings,
+)
 from pdf_compressor.gui.worker import BatchWorker, ScanWorker
 
 logger = logging.getLogger(__name__)
@@ -87,6 +95,7 @@ MANY_WARNING = "That is a lot of files. Please check that you picked the right f
 STILL_WORKING = (
     "PDF Compressor is still working. Stop after the current file and close?"
 )
+COPYRIGHT = "Copyright (C) 2026 Tony Vu"
 
 STYLE = f"""
 QLabel[role="heading"] {{ font-size: 15pt; font-weight: 600; color: {INK}; }}
@@ -107,6 +116,14 @@ QPushButton[role="primary"]:disabled {{
     background: {ACCENT_DISABLED};
     border-color: {ACCENT_DISABLED};
 }}
+QPushButton[role="link"] {{
+    border: none;
+    background: transparent;
+    color: {MUTED};
+    text-decoration: underline;
+    padding: 6px 4px;
+}}
+QPushButton[role="link"]:hover {{ color: {ACCENT}; }}
 """
 
 
@@ -236,7 +253,12 @@ class MainWindow(QMainWindow):
         self._start = QPushButton("Start")
         self._start.setProperty("role", "primary")
         self._start.clicked.connect(self._start_clicked)
+        about = QPushButton("About")
+        about.setProperty("role", "link")
+        about.setCursor(Qt.CursorShape.PointingHandCursor)
+        about.clicked.connect(self._about_clicked)
         start_row = QHBoxLayout()
+        start_row.addWidget(about)
         start_row.addWidget(self._status, 1)
         start_row.addWidget(self._start)
         layout.addLayout(start_row)
@@ -600,6 +622,16 @@ class MainWindow(QMainWindow):
 
     # Messages
 
+    def _about_clicked(self) -> None:
+        box = QMessageBox(self)
+        box.setWindowTitle(f"About {TITLE}")
+        box.setIconPixmap(QIcon(str(APP_ICON)).pixmap(64, 64))
+        box.setTextFormat(Qt.TextFormat.RichText)
+        # Makes the link clickable; the box opens it in Explorer.
+        box.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        box.setText(about_html(_version(), app_dir() / "licenses"))
+        box.exec()
+
     def _warn(self, text: str) -> None:
         QMessageBox.warning(self, TITLE, text)
 
@@ -682,6 +714,28 @@ def confirmation_html(scan: ScanResult, settings: Settings) -> str:
         items = "<br>".join(html.escape(line) for line in lines)
         paragraphs.append(f"These will be left out:<br>{items}")
     return "".join(f"<p>{paragraph}</p>" for paragraph in paragraphs)
+
+
+def about_html(version: str | None, licenses: Path) -> str:
+    """Return the About text: copyright, no warranty, and where the licenses are."""
+    name = TITLE if version is None else f"{TITLE} {version}"
+    link = html.escape(QUrl.fromLocalFile(str(licenses)).toString())
+    return (
+        f"<p><b>{name}</b><br>{COPYRIGHT}</p>"
+        "<p>This program comes with no warranty. It is free software: you can"
+        " share and change it under the GNU Affero General Public License,"
+        " version 3 or later.</p>"
+        "<p>It uses PyMuPDF and Qt. Their licenses, and this program's, are in"
+        f' the <a href="{link}">licenses folder</a>.</p>'
+    )
+
+
+def _version() -> str | None:
+    try:
+        return importlib.metadata.version("pdf-compressor")
+    except importlib.metadata.PackageNotFoundError:
+        # A build without the package metadata still shows the rest.
+        return None
 
 
 def _label(text: str, role: str) -> QLabel:

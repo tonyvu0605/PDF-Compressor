@@ -1,0 +1,40 @@
+PDF Compressor
+Copyright (C) 2026 Tony Vu
+
+PDF Compressor is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+PDF Compressor is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See LICENSE.txt in
+this folder for more details.
+
+You can get its source code from whoever gave you this copy.
+
+
+Software included in PDF Compressor
+-----------------------------------
+
+PyMuPDF and MuPDF, by Artifex Software
+  License: GNU AGPL, version 3 (LICENSE.txt; see also pymupdf\)
+  Source:  https://github.com/pymupdf/PyMuPDF and https://mupdf.com/releases
+  MuPDF is built with other libraries, among them FreeType, HarfBuzz,
+  libjpeg, OpenJPEG, LittleCMS and zlib. Their licenses come with the
+  MuPDF source. Portions of this software are copyright (C) The FreeType
+  Project (www.freetype.org). All rights reserved. This software is based
+  in part on the work of the Independent JPEG Group.
+
+Qt for Python (PySide6 and Shiboken6) and Qt 6, by The Qt Company
+  License: GNU LGPL, version 3 (LGPL-3.0.txt, which adds to GPL-3.0.txt;
+           see also pyside6_essentials\ and shiboken6\)
+  Source:  https://code.qt.io/cgit/pyside/pyside-setup.git and
+           https://download.qt.io/official_releases/qt/
+  The Qt libraries are separate DLL files in the _internal folder, so
+  they can be replaced with another compatible build.
+
+Python, by the Python Software Foundation, with the OpenSSL, libffi and
+bzip2 libraries it includes
+  License: python\LICENSE.txt
+  Source:  https://www.python.org/downloads/source/

@@ -69,6 +69,8 @@ try {
         "--exclude-module", "PySide6.QtNetwork",
         "--icon", $icon,
         "--add-data", "$icon;pdf_compressor\gui",
+        # The About box reads the version from the package metadata.
+        "--copy-metadata", "pdf-compressor",
         "pdf_compressor\__main__.py"
     )
     $app = Join-Path $PSScriptRoot "dist\PDF Compressor"
@@ -93,6 +95,18 @@ try {
             Copy-Item -Path (Join-Path $packageLicenses "*") -Destination $target -Recurse -Force
         }
     }
+    # The wheels name their licenses without including the texts, so the
+    # repo carries them, with NOTICE.txt and this app's own LICENSE.
+    Copy-Item -Path (Join-Path $PSScriptRoot "installer\licenses\*") -Destination $licenses
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "LICENSE") -Destination (Join-Path $licenses "LICENSE.txt")
+    # Python's license also covers the OpenSSL, libffi and bzip2 DLLs it brings.
+    $pythonHome = & $python -I -c "import sys; print(sys.base_prefix)"
+    if ($LASTEXITCODE -ne 0 -or -not $pythonHome) {
+        throw "Could not find the Python installation."
+    }
+    $pythonLicenses = Join-Path $licenses "python"
+    New-Item -ItemType Directory -Force -Path $pythonLicenses | Out-Null
+    Copy-Item -LiteralPath (Join-Path $pythonHome "LICENSE.txt") -Destination $pythonLicenses
 
     # ISCC resolves a relative /O against its current folder, so pass it absolute.
     $dist = Join-Path $PSScriptRoot "dist"
