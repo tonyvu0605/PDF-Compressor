@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from types import TracebackType
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 # Absolute imports: PyInstaller runs this file as a script, not as a package.
@@ -22,7 +23,7 @@ from pdf_compressor.core.settings import (
     new_log_path,
     writable_dir,
 )
-from pdf_compressor.gui.main_window import MainWindow
+from pdf_compressor.gui.main_window import APP_ICON, MainWindow
 from pdf_compressor.gui.worker import configure_logging
 
 BASE_FONT_POINTS = 12
@@ -54,6 +55,8 @@ def main(argv: list[str]) -> int:
 
     app = QApplication(argv)
     app.setApplicationName("PDF Compressor")
+    # Set on the application, so dialogs carry the icon too.
+    app.setWindowIcon(QIcon(str(APP_ICON)))
     font = app.font()
     font.setPointSize(BASE_FONT_POINTS)
     app.setFont(font)

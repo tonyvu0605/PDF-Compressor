@@ -24,6 +24,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=..\pdf_compressor\gui\app.ico
 OutputBaseFilename=PDF-Compressor-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes

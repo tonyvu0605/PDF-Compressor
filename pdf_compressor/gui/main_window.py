@@ -52,6 +52,9 @@ logger = logging.getLogger(__name__)
 MANY_FILES = 200
 LEFT_OUT_SHOWN = 10
 TITLE = "PDF Compressor"
+# build.ps1 puts the icon beside this module in the frozen build too.
+# installer/make_icon.py makes it from installer/app-icon.svg.
+APP_ICON = Path(__file__).with_name("app.ico")
 WINDOW_WIDTH = 900
 WINDOW_HEIGHT = 800
 SCREEN_SHARE = 0.9

@@ -59,12 +59,16 @@ try {
     Write-Host "Building PDF Compressor $version"
 
     # No hidden imports are needed. Excluding QtNetwork keeps OpenSSL DLLs
-    # from Git's PATH entry out of the build.
+    # from Git's PATH entry out of the build. The icon paths are absolute
+    # because PyInstaller reads relative ones against --specpath.
+    $icon = Join-Path $PSScriptRoot "pdf_compressor\gui\app.ico"
     Invoke-Native $python @(
         "-m", "PyInstaller", "--noconfirm", "--clean", "--onedir", "--windowed",
         "--name", "PDF Compressor",
         "--specpath", "build", "--workpath", "build", "--distpath", "dist",
         "--exclude-module", "PySide6.QtNetwork",
+        "--icon", $icon,
+        "--add-data", "$icon;pdf_compressor\gui",
         "pdf_compressor\__main__.py"
     )
     $app = Join-Path $PSScriptRoot "dist\PDF Compressor"
