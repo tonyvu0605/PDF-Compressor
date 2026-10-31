@@ -1,15 +1,15 @@
 # Architecture
 
-This document explains how PDF Compressor works and why. It is the reference for the app's behavior: when the code and this document disagree, one of them has a bug. [README.md](README.md) covers using the app, and [CONTRIBUTING.md](CONTRIBUTING.md) covers working on it.
+How PDF Compressor works and why. If the code and this file disagree, one of them has a bug.
 
 ## Goals
 
-PDF Compressor batch-compresses PDFs for court and government e-filing portals. Its user is an older attorney who is not technical, on Windows 10 or 11, with his files on his local PC. The app succeeds when:
+PDF Compressor batch-compresses PDFs for court and government e-filing portals. It is meant for people who aren't technical, on Windows 10 or 11, with their files on a local drive. It has to:
 
-- he picks a folder or files, presses Start, and gets files ready to upload;
-- no original is ever lost or damaged;
-- text stays sharp and searchable;
-- any file still over the portal's size limit is obvious.
+- turn a folder or a few files into upload-ready PDFs with one Start button;
+- never lose or damage an original;
+- keep text sharp and searchable;
+- make any file that is still over the portal's size limit obvious.
 
 Out of scope for now: OCR, splitting oversized PDFs, network or cloud drives, PDF/A conversion, macOS or Linux, automatic updates, code signing and single-instance window handling.
 
@@ -153,18 +153,18 @@ When a result is still over the size limit and the level wasn't High, the file i
 - Temp files sit next to their destination, so `os.replace` is a rename within one folder. A replace that Windows refuses is reported as read-only when the file has the read-only attribute, and as open in another program otherwise.
 - Backup run folders are claimed with `mkdir`, which either creates the folder or fails. Two windows starting a run in the same minute never share one, and an existing backup is never overwritten.
 - Copies made in mode 1 use `shutil.copyfile`, which leaves out the read-only attribute. Backups use `shutil.copy2`, which keeps the file's attributes.
-- Defaults follow Windows' Documents known folder, so with OneDrive folder backup they land in OneDrive, where the user expects his documents.
+- Defaults follow Windows' Documents known folder, so with OneDrive folder backup they land in OneDrive, where the user expects their documents.
 - The app is licensed AGPL-3.0-or-later because PyMuPDF is AGPL. Qt is used under the LGPL; its DLLs ship as separate files, so they can be replaced. The About box shows the notice that the AGPL asks interactive programs to show.
 
 ## Known gaps
 
-None of these loses data. They are candidates for issues.
+None of these loses data.
 
 Scanning:
 
 - Overlapping inputs that reach the same over-long path or unreadable folder list it twice in the left-out list.
 - A folder whose own path is over 260 characters is reported with the file wording, "This file's path is too long for Windows."
-- An access-denied folder, or any other failed `stat()`, is told its path may be too long. Checking `winerror` would name the real cause.
+- An access-denied folder, or any other failed `stat()`, is reported as a path that may be too long. Checking `winerror` would give the real cause.
 - `blocked_reason` resolves the home and system folders on every call: about 8 seconds for an 8,000-file tree, off the GUI thread. Adding paths calls it on the GUI thread, once per path.
 - When the same PDF is reached as a file and through its folder, the first input decides its output layout.
 

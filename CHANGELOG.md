@@ -4,8 +4,6 @@ Notable changes to PDF Compressor are listed here. The format follows [Keep a Ch
 
 ## Unreleased
 
-The first version, planned as 1.0.0.
-
 ### Added
 
 - Batch compression of PDF folders, subfolders included, and single files, with drag and drop and a Compress PDF entry in File Explorer's Send to menu.

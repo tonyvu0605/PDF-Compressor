@@ -1,28 +1,17 @@
 # PDF Compressor
 
-PDF Compressor is a Windows desktop app that makes PDF files smaller, so court and government e-filing portals accept them. Pick a folder or files, press Start, and get files ready to upload. Originals are never lost or damaged, text stays sharp and searchable, and any file still over the portal's size limit is easy to spot.
+PDF Compressor shrinks PDFs so court and government e-filing portals will take them. Add a folder or a few files, click Start, and the smaller copies are ready to upload. Scanned pages shrink the most, and text stays sharp and searchable.
 
-It was written for one user, an attorney who used to compress files one at a time in Adobe Acrobat, so the window uses short, plain English and large text.
+It was made for an attorney who used to compress filings one at a time in Adobe Acrobat, so the wording is plain and the text is large. Originals aren't touched unless you choose to replace them, and a file that is still too big for the portal is marked in red.
 
-- Compresses whole folders, subfolders included, or single files. Files can also be dragged onto the window or sent from File Explorer.
-- Saves compressed copies to a separate folder by default. It can also replace the originals, with or without backups.
-- Has three compression levels that mirror Acrobat's Low, Medium and High.
-- Retries a file at High once when it is over your size limit, and marks it in red if it is still over.
-- Can remove hidden info, such as the author and title, from each file.
-- Skips files that compressing would harm, such as signed or password-protected PDFs, and says why.
+## Download
 
-It runs on Windows 10 and 11, 64-bit.
+Get the latest version from the [Releases page](https://github.com/tonyvu0605/PDF-Compressor/releases/latest). It runs on 64-bit Windows 10 and 11.
 
-## Install
+- `PDF-Compressor-Setup-<version>.exe` installs it for your Windows account, without an admin prompt. It adds Start menu and desktop shortcuts and a Compress PDF entry to File Explorer's Send to menu.
+- `PDF-Compressor-<version>-portable.zip` runs without installing. Unzip it anywhere and open `PDF Compressor.exe`. It keeps its settings in that folder and doesn't add a Send to entry.
 
-There are no published releases yet. Build the installer and the portable zip from source with `.\build.ps1`, as described in [CONTRIBUTING.md](CONTRIBUTING.md#building).
-
-- The installer, `PDF-Compressor-Setup-<version>.exe`, installs for the current user without an admin prompt. It adds Start menu and desktop shortcuts and a Compress PDF entry to File Explorer's Send to menu.
-- The portable zip, `PDF-Compressor-<version>-portable.zip`, runs from any folder. It keeps its settings next to `PDF Compressor.exe` and adds no Send to entry.
-
-The app is not code-signed, so Windows SmartScreen warns the first time it runs.
-
-## Getting started
+## Using it
 
 ### The first time you open it
 
@@ -49,12 +38,12 @@ To compress hundreds of files, send the folder that holds them instead of select
 | Option | Choices |
 |--------|---------|
 | How to save | Save compressed copies (the default), Replace originals, keep backups, or Replace originals, no backup |
-| Output or backup folder | `Documents\Compressed PDFs` and `Documents\PDF Backups` unless you choose others |
+| Output or backup folder | `Documents\Compressed PDFs` and `Documents\PDF Backups`, unless you pick others |
 | Compression | Low (best quality), Medium (recommended) or High (smallest files) |
 | Size limit | A number of MB, or blank for no limit |
-| Remove hidden info | On by default; clears the document information and XMP metadata |
+| Remove hidden info | On by default. Clears the document information and XMP metadata |
 
-The app remembers these for next time. Replace originals, no backup asks "Are you sure? Your original files can't be recovered." before every run.
+The app remembers these between runs. Replace originals, no backup asks "Are you sure? Your original files can't be recovered." before every run.
 
 | Level | Resamples images above | Down to | JPEG quality |
 |-------|------------------------|---------|--------------|
@@ -62,7 +51,7 @@ The app remembers these for next time. Replace originals, no backup asks "Are yo
 | Medium | 200 dpi | 150 dpi | 75 |
 | High | 150 dpi | 100 dpi | 60 |
 
-Text and drawings are never turned into images, and black-and-white images are never re-encoded.
+Only color and grayscale images are resampled. Text and drawings are never turned into images, and black-and-white images are left alone. If a file is still over the size limit, it is redone once at High and the smaller result is kept.
 
 ## Results
 
@@ -75,16 +64,24 @@ The summary reads like "37 files: 412 MB down to 96 MB. 2 skipped." Each file ge
 
 ## Settings and logs
 
-- Installed: `%APPDATA%\PDF Compressor\settings.json`, with a `logs` folder beside it.
-- Portable (when `portable.txt` sits next to the exe): `settings.json` and `logs` next to the exe. If that folder can't be written to, the app uses `%APPDATA%\PDF Compressor`, then the temp folder.
+The installed app keeps `settings.json` and a `logs` folder in `%APPDATA%\PDF Compressor`. The portable copy, which has a `portable.txt` file next to its exe, keeps them next to `PDF Compressor.exe`. If it can't write there, it falls back to `%APPDATA%\PDF Compressor`, then the temp folder.
 
-The app writes one log file per launch, only when it has something to log, and keeps the last 20.
+A launch writes a log file only if it has something to log, and the last 20 are kept.
 
 ## Limitations
 
-This version has no OCR, can't split oversized PDFs, and works only on local drives. It has no PDF/A conversion, no macOS or Linux version, no automatic updates and no code signing, and opening it twice gives two windows. The compression levels are starting points to tune on real filings. [ARCHITECTURE.md](ARCHITECTURE.md#known-gaps) lists smaller known gaps.
+- No OCR.
+- It can't split a PDF that is still too big.
+- Local drives only.
+- No PDF/A conversion, no macOS or Linux version, and no automatic updates.
+- Opening it a second time opens a second window.
+- The compression levels still need tuning on more real filings.
 
-## Development
+Smaller known issues are listed in [ARCHITECTURE.md](ARCHITECTURE.md#known-gaps).
+
+## Building from source
+
+You need 64-bit Python 3.13, and Inno Setup to build the installer.
 
 ```powershell
 python -m venv .venv
@@ -93,8 +90,8 @@ python -m venv .venv
 .venv\Scripts\python -m pytest -q
 ```
 
-[CONTRIBUTING.md](CONTRIBUTING.md) covers the project rules, testing, building and the release checklist. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the app works and why.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the build script, the tests and releases. [ARCHITECTURE.md](ARCHITECTURE.md) explains how the app works.
 
 ## License
 
-PDF Compressor is free software under the GNU Affero General Public License, version 3 or later. See [LICENSE](LICENSE). It uses PyMuPDF, which is AGPL, and Qt for Python, which is LGPL. [installer/licenses/NOTICE.txt](installer/licenses/NOTICE.txt) lists every component a build includes, its license and where to get its source.
+PDF Compressor is free software under the GNU Affero General Public License, version 3 or later. See [LICENSE](LICENSE). It uses PyMuPDF, which is AGPL, and Qt for Python, which is LGPL. [NOTICE.txt](installer/licenses/NOTICE.txt) lists every component a build includes, with its license and where to get its source.

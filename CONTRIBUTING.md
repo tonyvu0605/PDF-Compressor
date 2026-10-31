@@ -1,6 +1,6 @@
 # Contributing
 
-This guide covers setting up, the project's rules, testing and building a release. Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing how the app behaves; it is the reference for the rules the code follows.
+Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing how the app behaves.
 
 ## Setup
 
@@ -22,53 +22,31 @@ winget install -e --id JRSoftware.InnoSetup.7 --scope user
 | Build everything | `.\build.ps1` |
 | Remake the icon | `.venv\Scripts\python installer\make_icon.py` |
 
-## Project rules
+## Code
 
-### Structure
-
-- `core/` never imports Qt. The window is a thin layer over `core.batch`.
-- Long work runs in the `QThread` workers in `gui/worker.py`. They talk to the window only through signals and never touch widgets.
-- `core/` turns a failure with one file into a result with a plain-English message, and never shows dialogs.
-
-### Python
-
-- Python 3.13, with type hints on every function signature, using built-in generics such as `list[str]` and `Path | None`.
-- `pyproject.toml` is the only config file.
-- The runtime dependencies are PySide6-Essentials and PyMuPDF, and the dev dependencies are pytest, Ruff and PyInstaller. Discuss any new dependency first. PyMuPDF stays pinned to `~=1.28` until the workarounds in [ARCHITECTURE.md](ARCHITECTURE.md#key-decisions) are checked on a newer version.
-- Ruff formats and lints, with its default line length of 88.
-- Use dataclasses for results and settings, and `enum.Enum` for the save mode and the compression level. Values from the design, such as the dpi, the JPEG quality, the 10% rule and the 200-file warning, are named constants at the top of the module that uses them.
-- Log with `logger = logging.getLogger(__name__)`. The app never uses `print`.
-- Catch specific exceptions. No bare `except:`, and no silent `except Exception: pass`.
-- No module-level mutable state.
-- Use `pathlib`. Paths with spaces and non-ASCII names must work, and every text file is read and written as UTF-8.
-- Detect a frozen build with `getattr(sys, "frozen", False)`, and use `Path(sys.executable).parent` as the app folder.
-
-### Writing
-
-These apply to UI text, code comments, docstrings, docs and commit messages.
-
-- UI text is short, plain English for an older reader who is not technical, with no jargon. The base font is 12 pt.
-- Use plain ASCII punctuation: no em or en dashes, curly quotes, arrows or emoji.
-- Comments explain why, never what. Don't narrate the code, number steps or leave change notes.
-- Public functions and classes get a one-sentence docstring. Add Args or Returns only when the type hints don't make them obvious.
-- A TODO says what is missing and why.
-- Headings are in sentence case.
+- `core/` never imports Qt, and the window is a thin layer over `core.batch`. Long work runs in the `QThread` workers in `gui/worker.py`, which talk to the window only through signals.
+- `core/` never shows dialogs. A problem with one file becomes a result with a plain-English message.
+- Python 3.13, with type hints on every function using built-in generics such as `list[str]` and `Path | None`. Ruff formats and lints with its defaults.
+- `pyproject.toml` is the only config file. Ask before adding a dependency. PyMuPDF stays pinned to `~=1.28` until the workarounds in [ARCHITECTURE.md](ARCHITECTURE.md#key-decisions) are checked on a newer version.
+- Results and settings are dataclasses, and the save mode and compression level are enums. Values such as the dpi, the JPEG quality, the 10% rule and the 200-file warning are constants at the top of the module that uses them.
+- Log with `logging.getLogger(__name__)`, never `print`. Catch specific exceptions.
+- Use `pathlib`. Paths with spaces and non-ASCII names have to work, and text files are read and written as UTF-8.
+- A frozen build is detected with `getattr(sys, "frozen", False)`, and its app folder is `Path(sys.executable).parent`.
+- UI text is short, plain English for people who aren't technical. The base font is 12 pt.
 
 ## Tests
 
-- Write the test first for any change to `core/`, watch it fail, then make it pass. The window, the installer and the build scripts are checked by hand with the [release checklist](#release-checklist).
-- A test that passes the first time it runs proves nothing yet. Break the code on purpose and watch the test fail before trusting it.
+- Changes to `core/` need tests, ideally written first. The window, the installer and the build script are checked by hand with the [release checklist](#release-checklist).
 - Test files mirror the module they cover: `tests/test_scan.py` covers `core/scan.py`.
-- `tests/conftest.py` builds every test PDF in code, each with a seeded `random.Random`, in under a second. Unless a fixture says otherwise, it saves with `garbage=3, deflate=True, use_objstms=True, no_new_id=True`, so rebuilds are byte for byte the same.
-- Tests use only `tmp_path`. An autouse fixture points the home folder and the six system-folder variables into it, because `tmp_path` normally sits in `%LOCALAPPDATA%`, which the app refuses. Never point the app or the tests at real user folders.
-- Scan and batch tests build their folders under `BASE`, a name with an n-tilde, a curly apostrophe and a letter outside cp1252. It is written with escapes in `conftest.py`.
+- `tests/conftest.py` builds every test PDF in code from a seeded `random.Random`. Unless a fixture says otherwise, it saves with `garbage=3, deflate=True, use_objstms=True, no_new_id=True`, so rebuilds are byte for byte the same.
+- Tests only touch `tmp_path`. An autouse fixture points the home folder and the system-folder variables into it, because `tmp_path` normally sits in `%LOCALAPPDATA%`, which the app refuses. Never point the app or the tests at real user folders.
+- Scan and batch tests build their folders under `BASE`, a name with an n-tilde, a curly apostrophe and a letter outside cp1252, written with escapes in `conftest.py`.
 
 ## Commits and pull requests
 
-- Make one change per commit, and stage files by name. Never commit `.venv/`, `build/`, `dist/` or test output.
-- Write the subject in the imperative, in 50 characters or fewer, with no trailing period and no prefix such as `feat:`. For example: `Add blocked-folder check`.
-- Add a body, wrapped at 72 characters, only when the reason for the change isn't obvious. Don't recap the diff.
-- Before opening a pull request, `ruff check .`, `ruff format --check .` and `python -m pytest -q` must all pass. Say in the pull request what changed and how you checked it. A change in behavior updates ARCHITECTURE.md in the same pull request.
+- One change per commit. Never commit `.venv/`, `build/`, `dist/` or test output.
+- Subjects are imperative, 50 characters or fewer, with no trailing period and no prefix such as `feat:`. For example: `Add blocked-folder check`. Add a body, wrapped at 72 characters, when the reason for the change isn't obvious.
+- Before opening a pull request, `ruff check .`, `ruff format --check .` and `python -m pytest -q` must pass. Say what changed and how you checked it. A change in behavior updates ARCHITECTURE.md in the same pull request.
 
 ## Building
 
@@ -127,6 +105,6 @@ Run this before handing out a build, using the output of `.\build.ps1`. Work onl
 
 - [ ] The licenses folder holds `NOTICE.txt`, `LICENSE.txt`, `GPL-3.0.txt`, `LGPL-3.0.txt` and the python folder's `LICENSE.txt`.
 
-### Before the first handover
+### Before the first release
 
 - [ ] Tune `LEVELS` in `pdf_compressor/core/compress.py` on real scanned filings: check that text stays sharp at each level and note the sizes.
